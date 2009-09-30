@@ -1,3 +1,4 @@
+
 module SlashPort
   class Component
     @@subclasses = Array.new
@@ -12,12 +13,43 @@ module SlashPort
     end
 
     def get_variables(filter=nil)
-      data = Hash.new
-      self.variables.each do |name, var|
+      get_things(variables, filter)
+    end
+
+    def get_configs(filter=nil)
+      get_things(configs, filter)
+    end
+
+    def get_things(thing, filter=nil)
+      if filter.is_a?(String)
+        filter = Regexp.new(filter)
+      elsif filter == nil
+        filter = /^./
+      end
+
+      data = Hash.new { |h,k| h[k] = Hash.new }
+      thing.each do |name, var|
+        next unless name =~ filter
         result = self.send(var.method)
-        data[name] = result
+        next if result == nil
+        data[self.class.label][name] = result
+
+        # If we want to flatten the hash, we can do this:
+        #if var.is_a?(MultiVariable)
+          #result.each do |key,value|
+            #path = self.path(name, key)
+            #next unless path =~ filter
+            #data[path] = value
+          #end
+        #else
+          #data[self.path(name)] = result
+        #end
       end
       return data
+    end
+
+    def path(*names)
+      return [self.class.label, *names].join("/")
     end
 
     # See Class#inherited for what this method 
@@ -51,10 +83,6 @@ module SlashPort
       @variables[name] = MultiVariable.new(method, description)
     end # def self.multivariable
 
-    def self.variables(filter=nil)
-      return @variables
-    end
-
     # class-level to easily map a variable name to a method
     def self.config(name, method, description=nil)
       if description == nil
@@ -63,11 +91,25 @@ module SlashPort
       puts "#{self.name}: new config #{name}"
 
       # remember: this is a class-level instance variable
-      @configs[name] = method
+      @configs[name] = Variable.new(method, description)
     end # def self.config
+
+    def self.multiconfig(name, method, description=nil)
+      if description == nil
+        raise "Config #{self.name}/#{name} has no description"
+      end
+      puts "#{self.name}: new multiconfig #{name}"
+
+      # remember: this is a class-level instance variable
+      @configs[name] = MultiVariable.new(method, description)
+    end # def self.multiconfig
 
     def self.configs(filter=nil)
       return @configs
+    end
+
+    def self.variables(filter=nil)
+      return @variables
     end
 
     # class-level initialization. This is called when ruby first
@@ -91,12 +133,20 @@ module SlashPort
       return @@components
     end # def self.components
 
-    def self.get_variables
+    def self.get_things(thing)
       data = Hash.new
       self.components.each do |component|
-        data[component.class.label] = component.get_variables
+        data.merge!(component.send("get_#{thing}"))
       end
       return data
+    end
+
+    def self.get_variables
+      return self.get_things("variables")
+    end
+
+    def self.get_configs
+      return self.get_things("configs")
     end
 
     def self.label
