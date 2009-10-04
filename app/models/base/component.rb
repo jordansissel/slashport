@@ -20,31 +20,35 @@ module SlashPort
       get_things(configs, filter)
     end
 
+    def _want(value, pattern)
+      if pattern.is_a?(Regexp)
+        return (!pattern or value =~ pattern)
+      else
+        return (!pattern or value == pattern)
+      end
+    end
+
     def get_things(thing, filter=nil)
-      #if filter.is_a?(String)
-        #filter = Regexp.new(filter)
-      #elsif filter == nil
-        #filter = /^./
-      #end
+      return unless _want(self.class.label, filter["component"])
 
       data = []
-      #data = Hash.new { |h,k| h[k] = Hash.new }
-      thing.each do |name, var|
-        #next unless name =~ filter
-        #entry.merge(self.send(var.method))
+      thing.each do |section, var|
+        next unless _want(section, filter["section"])
         result = self.send(var.method)
-        if result.is_a?(Hash)
+        if var.is_a?(MultiVariable)
           result.each do |key,value|
+            next unless _want(key, filter["key"])
             data << {
               "component" => self.class.label,
-              "section" => name,
-              key => value,
+              "section" => section,
+              "key" => key,
+              "value" => value,
             }
           end
         else 
           data << {
             "component" => self.class.label,
-            "section" => name,
+            "section" => section,
             "value" => result,
           }
         end
@@ -140,7 +144,10 @@ module SlashPort
     def self.get_things(thing, filter)
       data = []
       self.components.each do |component|
-        data += component.send("get_#{thing}", filter)
+        result = component.send("get_#{thing}", filter)
+        if result
+          data += result
+        end
       end
       return data
     end
