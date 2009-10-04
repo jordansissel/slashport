@@ -9,6 +9,10 @@ class SlashPort::Component
       Shows the master status of this mysql server
     doc
 
+    multivariable "slave-status", :SlaveStatus, <<-doc
+      Shows the slave status of this mysql server
+    doc
+
     multivariable "stats", :MysqlStats, <<-doc
       Stats from 'show status' in mysql.
     doc
@@ -30,9 +34,9 @@ class SlashPort::Component
       begin
         # dummy query just to test our connection
         @db["show variables like 'x'"].map
-        return 1
-      rescue Sequel::DatabaseConnectionError
-        return 0
+        return true
+      rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
+        return false
       end
     end # end MysqlOK
 
@@ -44,7 +48,25 @@ class SlashPort::Component
           ret[key.to_s.downcase] = val
         end
         return ret
-      rescue Sequel::DatabaseConnectionError
+      rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
+        return nil
+      end
+    end # end MasterStatus
+
+    def SlaveStatus
+      begin
+        data = @db["show slave status"].map[0]
+        ret = Hash.new
+        if data == nil
+          # this host is not a slave
+          ret["is-slave"] = false
+        else
+          data.each do |key, val|
+            ret[key.to_s.downcase] = val
+          end
+        end
+        return ret
+      rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
         return nil
       end
     end # end MasterStatus
@@ -59,7 +81,7 @@ class SlashPort::Component
           data[row[:Variable_name].downcase] = (Float(value) rescue value)
         end
         return data
-      rescue Sequel::DatabaseConnectionError
+      rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
         return nil
       end
     end # end MysqlStats

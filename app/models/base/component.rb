@@ -21,29 +21,33 @@ module SlashPort
     end
 
     def get_things(thing, filter=nil)
-      if filter.is_a?(String)
-        filter = Regexp.new(filter)
-      elsif filter == nil
-        filter = /^./
-      end
+      #if filter.is_a?(String)
+        #filter = Regexp.new(filter)
+      #elsif filter == nil
+        #filter = /^./
+      #end
 
-      data = Hash.new { |h,k| h[k] = Hash.new }
+      data = []
+      #data = Hash.new { |h,k| h[k] = Hash.new }
       thing.each do |name, var|
-        next unless name =~ filter
+        #next unless name =~ filter
+        #entry.merge(self.send(var.method))
         result = self.send(var.method)
-        next if result == nil
-        data[self.class.label][name] = result
-
-        # If we want to flatten the hash, we can do this:
-        #if var.is_a?(MultiVariable)
-          #result.each do |key,value|
-            #path = self.path(name, key)
-            #next unless path =~ filter
-            #data[path] = value
-          #end
-        #else
-          #data[self.path(name)] = result
-        #end
+        if result.is_a?(Hash)
+          result.each do |key,value|
+            data << {
+              "component" => self.class.label,
+              "section" => name,
+              key => value,
+            }
+          end
+        else 
+          data << {
+            "component" => self.class.label,
+            "section" => name,
+            "value" => result,
+          }
+        end
       end
       return data
     end
@@ -133,20 +137,20 @@ module SlashPort
       return @@components
     end # def self.components
 
-    def self.get_things(thing)
-      data = Hash.new
+    def self.get_things(thing, filter)
+      data = []
       self.components.each do |component|
-        data.merge!(component.send("get_#{thing}"))
+        data += component.send("get_#{thing}", filter)
       end
       return data
     end
 
-    def self.get_variables
-      return self.get_things("variables")
+    def self.get_variables(filter=nil)
+      return self.get_things("variables", filter)
     end
 
-    def self.get_configs
-      return self.get_things("configs")
+    def self.get_configs(filter=nil)
+      return self.get_things("configs", filter)
     end
 
     def self.label

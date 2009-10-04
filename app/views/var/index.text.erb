@@ -1,0 +1,7 @@
+<% @variables.each do |var| 
+   keys = ["component", "section"]
+   keys += var.keys.select { |k| !keys.include?(k) }.sort
+   -%>
+<%=h keys.collect { |k| "#{k}=#{var[k]}" }.join(",") %>
+<% end -%>
+

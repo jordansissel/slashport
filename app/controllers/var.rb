@@ -1,6 +1,7 @@
 class Var < Application
   def index
-    self.content_type = :text
-    return SlashPort::Component.get_variables.to_yaml
+    only_provides :json, :text
+    @variables = SlashPort::Component.get_variables(params)
+    display @variables
   end
 end
