@@ -22,9 +22,9 @@ module SlashPort
 
     def _want(value, pattern)
       if pattern.is_a?(Regexp)
-        return (!pattern or value =~ pattern)
+        return !!(!pattern or value =~ pattern)
       else
-        return (!pattern or value == pattern)
+        return !!(!pattern or value == pattern)
       end
     end
 
@@ -32,6 +32,7 @@ module SlashPort
       return unless _want(self.class.label, filter["component"])
 
       data = []
+
       thing.each do |section, var|
         next unless _want(section, filter["section"])
         results = self.send(var.handler)
@@ -46,9 +47,7 @@ module SlashPort
             }
           end
         else 
-          if !results.is_a?(Array)
-            results == [results]
-          end
+          results = [results] if !results.is_a?(Array)
 
           results.each do |result|
             if result.is_a?(Hash)
@@ -65,17 +64,15 @@ module SlashPort
             end
 
             keep = true
-            filter.each do |key,value|
-              puts "#{key}: #{result[key]}: #{value}"
-              if result[key] !~ value
+            filter.each do |filterkey,filtervalue|
+              want = _want(result[filterkey], filtervalue)
+              if !want
                 keep = false
                 break
               end
             end
 
-            if keep
-              data << result
-            end
+            data << result if keep
           end
         end
       end
@@ -106,6 +103,7 @@ module SlashPort
       if options[:doc] == nil
         raise "Variable #{self.name}/#{name} has no description"
       end
+      name = options[:name]
       puts "#{self.name}: new variable #{name}"
       options[:sort] ||= []
 
@@ -173,7 +171,7 @@ module SlashPort
       return @@components
     end # def self.components
 
-    def self.get_things(thing, filter)
+    def self.get_things(thing, filter=nil)
       data = []
       self.components.each do |component|
         result = component.send("get_#{thing}", filter)

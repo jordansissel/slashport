@@ -69,7 +69,7 @@ class SlashPort::Component
         next unless line =~ /^\//
 
         line.chomp!
-        fields = %w[size, used, available, percentused]
+        fields = %w[size used available percentused]
         values = line.split
         source = values.shift
         mount = values.pop
