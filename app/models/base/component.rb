@@ -37,7 +37,7 @@ module SlashPort
         results = self.send(var.handler)
         if var.is_a?(MultiVariable)
           results.each do |key,value|
-            next unless _want(key, filter["key"])
+            next unless _want(key, filter[key])
             data << {
               "component" => self.class.label,
               "section" => section,
@@ -64,7 +64,18 @@ module SlashPort
               }
             end
 
-            data << result
+            keep = true
+            filter.each do |key,value|
+              puts "#{key}: #{result[key]}: #{value}"
+              if result[key] !~ value
+                keep = false
+                break
+              end
+            end
+
+            if keep
+              data << result
+            end
           end
         end
       end

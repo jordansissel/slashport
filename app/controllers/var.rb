@@ -4,9 +4,9 @@ class Var < Application
 
     filter = Hash.new
     params.each do |key, value|
-      next if ["format", "action"].include?(key)
+      # skip parameters from merb itself
+      next if ["controller", "format", "action"].include?(key)
       next if value == nil
-      key = "component" if key == :id
       filter[key] = Regexp.new(value)
     end
 

@@ -1,9 +1,13 @@
 <% 
 data = []
 @variables.each do |var| 
+  # component, section - first
   keys = ["component", "section"]
+  # the other keys next, sorted by key
   keys += var.keys.select { |k| !keys.include?(k) }.sort
-  data << keys.collect { |k| "#{k}=#{var[k]}" }.join(",")
+  # value is special
+  keys.delete("value")
+  data << keys.collect { |k| "#{k}=#{var[k]}" }.join(",") + ": #{var["value"]}"
 end
 -%>
 <%= data.sort.join("\n") %>
