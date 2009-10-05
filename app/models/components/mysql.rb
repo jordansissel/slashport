@@ -5,25 +5,25 @@ require 'mysql' # for mysql errors
 class SlashPort::Component
   class Mysql < SlashPort::Component
 
-    multivariable "master-status", :MasterStatus, <<-doc
-      Shows the master status of this mysql server
-    doc
+    ##multivariable "master-status", :MasterStatus, <<-doc
+      #Shows the master status of this mysql server
+    #doc
+#
+    #multivariable "slave-status", :SlaveStatus, <<-doc
+      #Shows the slave status of this mysql server
+    #doc
+#
+    #multivariable "stats", :MysqlStats, <<-doc
+      #Stats from 'show status' in mysql.
+    #doc
+#
+    #variable "connection_ok", :MysqlOK, <<-doc
+      #Reports whether we can send queries successfully to mysql.
+    #doc
 
-    multivariable "slave-status", :SlaveStatus, <<-doc
-      Shows the slave status of this mysql server
-    doc
-
-    multivariable "stats", :MysqlStats, <<-doc
-      Stats from 'show status' in mysql.
-    doc
-
-    variable "connection_ok", :MysqlOK, <<-doc
-      Reports whether we can send queries successfully to mysql.
-    doc
-
-    multiconfig "settings", :ConfigGetVariables, <<-doc
-      Output of 'show variables'
-    doc
+    #multiconfig "settings", :ConfigGetVariables, <<-doc
+      #Output of 'show variables'
+    #doc
 
     def initialize
       super

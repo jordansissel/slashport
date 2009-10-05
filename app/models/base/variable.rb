@@ -1,11 +1,13 @@
 module SlashPort
   class Variable
-    attr_reader :method
-    attr_reader :description
+    attr_reader :handler
+    attr_reader :doc
+    attr_reader :sortkeys
 
-    def initialize(method, description)
-      @method = method
-      @description = description
+    def initialize(handler, doc, sortkeys=[])
+      @handler = handler
+      @doc = doc
+      @sortkeys = sortkeys
     end
   end # class Variable
 end # module SlashPort

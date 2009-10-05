@@ -34,9 +34,9 @@ module SlashPort
       data = []
       thing.each do |section, var|
         next unless _want(section, filter["section"])
-        result = self.send(var.method)
+        results = self.send(var.handler)
         if var.is_a?(MultiVariable)
-          result.each do |key,value|
+          results.each do |key,value|
             next unless _want(key, filter["key"])
             data << {
               "component" => self.class.label,
@@ -46,11 +46,26 @@ module SlashPort
             }
           end
         else 
-          data << {
-            "component" => self.class.label,
-            "section" => section,
-            "value" => result,
-          }
+          if !results.is_a?(Array)
+            results == [results]
+          end
+
+          results.each do |result|
+            if result.is_a?(Hash)
+              result.merge!({
+                "component" => self.class.label,
+                "section" => section,
+              })
+            else
+              result = {
+                "component" => self.class.label,
+                "section" => section,
+                "value" => result,
+              }
+            end
+
+            data << result
+          end
         end
       end
       return data
@@ -71,45 +86,51 @@ module SlashPort
     end # def self.inherited
 
     # class-level to easily map a variable name to a method
-    def self.variable(name, method, description=nil)
-      if description == nil
+    # arguments:
+    #   :name => variable name
+    #   :handler => method handler name
+    #   :doc => variable documentation
+    #   :sort => [optional] array of keys for sort (used with var.text output)
+    def self.variable(options = {})
+      if options[:doc] == nil
         raise "Variable #{self.name}/#{name} has no description"
       end
       puts "#{self.name}: new variable #{name}"
+      options[:sort] ||= []
 
       # remember: this is a class-level instance variable
-      @variables[name] = Variable.new(method, description)
+      @variables[options[:name]] = Variable.new(options[:handler], options[:doc], options[:sort])
     end # def self.variable
 
-    def self.multivariable(name, method, description=nil)
+    def self.multivariable(name, handler, description=nil)
       if description == nil
         raise "Variable #{self.name}/#{name} has no description"
       end
       puts "#{self.name}: new multivariable #{name}"
 
       # remember: this is a class-level instance variable
-      @variables[name] = MultiVariable.new(method, description)
+      @variables[name] = MultiVariable.new(handler, description)
     end # def self.multivariable
 
-    # class-level to easily map a variable name to a method
-    def self.config(name, method, description=nil)
+    # class-level to easily map a variable name to a handler
+    def self.config(name, handler, description=nil)
       if description == nil
         raise "Config #{self.name}/#{name} has no description"
       end
       puts "#{self.name}: new config #{name}"
 
       # remember: this is a class-level instance variable
-      @configs[name] = Variable.new(method, description)
+      @configs[name] = Variable.new(handler, description)
     end # def self.config
 
-    def self.multiconfig(name, method, description=nil)
+    def self.multiconfig(name, handler, description=nil)
       if description == nil
         raise "Config #{self.name}/#{name} has no description"
       end
       puts "#{self.name}: new multiconfig #{name}"
 
       # remember: this is a class-level instance variable
-      @configs[name] = MultiVariable.new(method, description)
+      @configs[name] = MultiVariable.new(handler, description)
     end # def self.multiconfig
 
     def self.configs(filter=nil)
