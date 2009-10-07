@@ -5,21 +5,21 @@ require 'mysql' # for mysql errors
 class SlashPort::Component
   class Mysql < SlashPort::Component
 
-    ##multivariable "master-status", :MasterStatus, <<-doc
-      #Shows the master status of this mysql server
-    #doc
-#
-    #multivariable "slave-status", :SlaveStatus, <<-doc
-      #Shows the slave status of this mysql server
-    #doc
-#
-    #multivariable "stats", :MysqlStats, <<-doc
-      #Stats from 'show status' in mysql.
-    #doc
-#
-    #variable "connection_ok", :MysqlOK, <<-doc
-      #Reports whether we can send queries successfully to mysql.
-    #doc
+    attribute :name => "master-status",
+              :handler => :MasterStatus,
+              :doc => "Shows the master status of this mysql server"
+
+    attribute :name => "slave-status",
+              :handler => :SlaveStatus,
+              :doc => "Shows the slave status of this mysql server"
+
+    attribute :name => "stats",
+              :handler => :MysqlStats,
+              :doc => "Stats from 'show status' in mysql."
+
+    attribute :name => "connection", 
+              :handler => :MysqlOK,
+              :doc => "Reports whether we can send queries successfully to mysql."
 
     #multiconfig "settings", :ConfigGetVariables, <<-doc
       #Output of 'show variables'
@@ -31,59 +31,64 @@ class SlashPort::Component
     end
 
     def MysqlOK
+      tuple = SlashPort::Tuple.new
       begin
         # dummy query just to test our connection
         @db["show variables like 'x'"].map
-        return true
+        tuple.data["healthy"] = 1
       rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
-        return false
+        tuple.data["healthy"] = 0
       end
+      return tuple
     end # end MysqlOK
 
     def MasterStatus
+      data = []
+      tuple = SlashPort::Tuple.new
       begin
-        data = @db["show master status"].map[0]
-        ret = Hash.new
-        data.each do |key, val|
-          ret[key.to_s.downcase] = val
+        result = @db["show master status"].map[0]
+        result.each do |key, val|
+          tuple.data[key.to_s.downcase] = val
         end
-        return ret
+        data << tuple
       rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
-        return nil
+        # ignore
       end
+      return data
     end # end MasterStatus
 
     def SlaveStatus
+      tuple = SlashPort::Tuple.new
       begin
-        data = @db["show slave status"].map[0]
+        result = @db["show slave status"].map[0]
         ret = Hash.new
-        if data == nil
+        if result == nil
           # this host is not a slave
-          ret["is-slave"] = false
+          tuple.data["is-slave"] = false
         else
-          data.each do |key, val|
-            ret[key.to_s.downcase] = val
+          result.each do |key, val|
+            tuple.data[key.to_s.downcase] = val
           end
         end
-        return ret
       rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
         return nil
       end
+      return tuple
     end # end MasterStatus
 
     def MysqlStats
+      tuple = SlashPort::Tuple.new
       begin
         result = @db["show global status"]
-        data = Hash.new
         result.map do |row|
           value = row[:Value]
           # use actual value if Float fails.
-          data[row[:Variable_name].downcase] = (Float(value) rescue value)
+          tuple.data[row[:Variable_name].downcase] = (Float(value) rescue value)
         end
-        return data
       rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
         return nil
       end
+      return tuple
     end # end MysqlStats
 
     def ConfigGetVariables
