@@ -4,16 +4,16 @@ module SlashPort
     @@subclasses = Array.new
     @@components = Array.new
 
-    def variables
-      return self.class.variables
+    def attributes
+      return self.class.attributes
     end
 
     def configs
       return self.class.configs
     end
 
-    def get_variables(filter=nil)
-      get_things(variables, filter)
+    def get_attributes(filter=nil)
+      get_things(attributes, filter)
     end
 
     def get_configs(filter=nil)
@@ -36,44 +36,22 @@ module SlashPort
       thing.each do |section, var|
         next unless _want(section, filter["section"])
         results = self.send(var.handler)
-        if var.is_a?(MultiVariable)
-          results.each do |key,value|
-            next unless _want(key, filter[key])
-            data << {
-              "component" => self.class.label,
-              "section" => section,
-              "key" => key,
-              "value" => value,
-            }
-          end
-        else 
-          results = [results] if !results.is_a?(Array)
+        results = [results] if !results.is_a?(Array)
 
-          results.each do |result|
-            if result.is_a?(Hash)
-              result.merge!({
-                "component" => self.class.label,
-                "section" => section,
-              })
-            else
-              result = {
-                "component" => self.class.label,
-                "section" => section,
-                "value" => result,
-              }
+        results.each do |result|
+          result.labels["component"] = self.class.label
+          result.labels["section"] = section
+
+          keep = true
+          filter.each do |filterkey,filtervalue|
+            want = _want(result.labels[filterkey], filtervalue)
+            if !want
+              keep = false
+              break
             end
-
-            keep = true
-            filter.each do |filterkey,filtervalue|
-              want = _want(result[filterkey], filtervalue)
-              if !want
-                keep = false
-                break
-              end
-            end
-
-            data << result if keep
           end
+
+          data << result if keep
         end
       end
       return data
@@ -93,33 +71,23 @@ module SlashPort
       end
     end # def self.inherited
 
-    # class-level to easily map a variable name to a method
+    # class-level to easily map a attribute name to a method
     # arguments:
-    #   :name => variable name
+    #   :name => attribute name
     #   :handler => method handler name
-    #   :doc => variable documentation
+    #   :doc => attribute documentation
     #   :sort => [optional] array of keys for sort (used with var.text output)
-    def self.variable(options = {})
+    def self.attribute(options = {})
       if options[:doc] == nil
-        raise "Variable #{self.name}/#{name} has no description"
+        raise "Attribute #{self.name}/#{name} has no description"
       end
       name = options[:name]
-      puts "#{self.name}: new variable #{name}"
+      puts "#{self.name}: new attribute #{name}"
       options[:sort] ||= []
 
-      # remember: this is a class-level instance variable
-      @variables[options[:name]] = Variable.new(options[:handler], options[:doc], options[:sort])
-    end # def self.variable
-
-    def self.multivariable(name, handler, description=nil)
-      if description == nil
-        raise "Variable #{self.name}/#{name} has no description"
-      end
-      puts "#{self.name}: new multivariable #{name}"
-
-      # remember: this is a class-level instance variable
-      @variables[name] = MultiVariable.new(handler, description)
-    end # def self.multivariable
+      # remember: this is a class-level instance attribute
+      @attributes[options[:name]] = Attribute.new(options[:handler], options[:doc], options[:sort])
+    end # def self.attribute
 
     # class-level to easily map a variable name to a handler
     def self.config(name, handler, description=nil)
@@ -132,22 +100,12 @@ module SlashPort
       @configs[name] = Variable.new(handler, description)
     end # def self.config
 
-    def self.multiconfig(name, handler, description=nil)
-      if description == nil
-        raise "Config #{self.name}/#{name} has no description"
-      end
-      puts "#{self.name}: new multiconfig #{name}"
-
-      # remember: this is a class-level instance variable
-      @configs[name] = MultiVariable.new(handler, description)
-    end # def self.multiconfig
-
     def self.configs(filter=nil)
       return @configs
     end
 
-    def self.variables(filter=nil)
-      return @variables
+    def self.attributes(filter=nil)
+      return @attributes
     end
 
     # class-level initialization. This is called when ruby first
@@ -155,8 +113,8 @@ module SlashPort
     # overriding Class#inherited (see 'def inherited' above).
     def self.class_initialize
       puts "#{self}::class_initialize"
-      # remember, this is a class-level instance variable
-      @variables = Registry.new
+      # remember, this is a class-level instance attribute
+      @attributes = Registry.new
       @configs = Registry.new
       @label = self.name.split("::")[-1].downcase
     end # def.class_initialize
@@ -182,8 +140,8 @@ module SlashPort
       return data
     end
 
-    def self.get_variables(filter=nil)
-      return self.get_things("variables", filter)
+    def self.get_attributes(filter=nil)
+      return self.get_things("attributes", filter)
     end
 
     def self.get_configs(filter=nil)

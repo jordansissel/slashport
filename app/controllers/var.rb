@@ -21,7 +21,7 @@ class Var < Application
     # ensure filter isn't changed
     filter.freeze
 
-    @variables = SlashPort::Component.get_variables(filter)
-    display @variables
+    @attributes = SlashPort::Component.get_attributes(filter)
+    display @attributes
   end
 end

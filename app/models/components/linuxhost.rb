@@ -2,19 +2,22 @@ require 'rubygems'
 
 class SlashPort::Component
   class LinuxHost < SlashPort::Component
-    variable :name => "uptime", :handler => :Uptime, :doc => "Uptime in seconds"
-    variable :name => "interfaces",
-             :handler => :IfStats,
-             :sort => ["interface", "field"],
-             :doc => "Interface Statistics"
+    #attribute :name => "uptime",
+              #:handler => :Uptime,
+              #:doc => "Uptime in seconds"
 
-    variable :name => "memory",
-             :handler => :MemStats,
-             :doc => "Memory stats from /proc/meminfo"
+    attribute :name => "interfaces",
+              :handler => :IfStats,
+              :sort => ["interface", "field"],
+              :doc => "Interface Statistics"
 
-    variable :name => "disk",
-             :handler => :DiskStats,
-             :doc => "Disk stats from 'df'"
+    #attribute :name => "memory",
+              #:handler => :MemStats,
+              #:doc => "Memory stats from /proc/meminfo"
+
+    #attribute :name => "disk",
+              #:handler => :DiskStats,
+              #:doc => "Disk stats from 'df'"
 
     def Uptime
       return File.open("/proc/uptime").read().split(" ")[0]
@@ -25,19 +28,21 @@ class SlashPort::Component
       File.open("/proc/net/dev").readlines().each do |line|
         line.chomp!
         next if line =~ /^Inter-|^ face/
+
+        tuple = SlashPort::Tuple.new
+
         fields = %w[rx_bytes rx_packets rx_errors rx_drop rx_fifo rx_frame
                     rx_compressed rx_multicast tx_bytes tx_packets tx_errors
                     tx_drop tx_fifo tx_colls tx_carrier tx_compressed]
 
         interface, values = line.split(":")
         interface.gsub!(/\s+/, "")
+        
+        tuple.labels["interface"] = interface
         fields.zip(values.split).each do |field,value|
-          data << {
-            "interface" => interface,
-            "field" => field,
-            "value" => value,
-          }
+          tuple.data[field] = value
         end
+        data << tuple
       end
       return data
     end

@@ -1,13 +1,18 @@
 <% 
 data = []
-@variables.each do |var| 
+@attributes.each do |tuple| 
   # component, section - first
   keys = ["component", "section"]
   # the other keys next, sorted by key
-  keys += var.keys.select { |k| !keys.include?(k) }.sort
-  # value is special
-  keys.delete("value")
-  data << keys.collect { |k| "#{k}=#{var[k]}" }.join(",") + ": #{var["value"]}"
+  keys += tuple.labels.keys.select { |k| !keys.include?(k) }.sort
+
+  labelstr = keys.collect { |k| "#{k}=#{tuple.labels[k]}" }.join(",")
+
+  # for each datum in our tuple, output one line.
+  # This gives us "label1=value1,label2=...,data1=value1" for
+  tuple.data.each do |key,value|
+    data << "#{labelstr},#{key}=#{value}"
+  end
 end
 -%>
 <%= data.sort.join("\n") %>

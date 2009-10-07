@@ -1,5 +1,5 @@
 module SlashPort
-  class Variable
+  class Attribute
     attr_reader :handler
     attr_reader :doc
     attr_reader :sortkeys
@@ -9,5 +9,5 @@ module SlashPort
       @doc = doc
       @sortkeys = sortkeys
     end
-  end # class Variable
+  end # class Attribute
 end # module SlashPort
