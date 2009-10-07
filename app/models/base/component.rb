@@ -20,21 +20,32 @@ module SlashPort
       get_things(configs, filter)
     end
 
-    def _want(value, pattern)
-      if pattern.is_a?(Regexp)
-        return !!(!pattern or value =~ pattern)
-      else
-        return !!(!pattern or value == pattern)
+    def _want(pattern, *values)
+      if pattern == nil
+        return true
       end
+
+      want = false
+      values.each do |value|
+        if (pattern.is_a?(Regexp) and !!(value =~ pattern))
+          want = true
+          break
+        elsif value == pattern
+          want = true
+          break
+        end
+      end
+      #puts [want, pattern, *values].inspect
+      return want
     end
 
     def get_things(thing, filter=nil)
-      return unless _want(self.class.label, filter["component"])
+      return unless _want(filter["component"], self.class.label)
 
       data = []
 
       thing.each do |section, var|
-        next unless _want(section, filter["section"])
+        next unless _want(filter["section"], section)
         results = self.send(var.handler)
         results = [results] if !results.is_a?(Array)
 
@@ -44,14 +55,28 @@ module SlashPort
 
           keep = true
           filter.each do |filterkey,filtervalue|
-            want = _want(result.labels[filterkey], filtervalue)
-            if !want
+            want = _want(filtervalue, result.labels[filterkey],
+                         result.data[filterkey])
+            puts "Filter: #{want} => #{filterkey} #{filtervalue}"
+
+            if (!want)
               keep = false
               break
             end
           end
 
-          data << result if keep
+          if keep
+            # if our filter includes a 'data' name, then we
+            # should strip all nonmatching data entries.
+            if (result.data.keys & filter.keys).length > 0
+              result.data.each_key do |key|
+                next if filter.has_key?(key)
+                puts "Removing #{key} data"
+                result.data.delete(key)
+              end
+            end
+            data << result
+          end
         end
       end
       return data
