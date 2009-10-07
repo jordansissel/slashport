@@ -35,7 +35,6 @@ module SlashPort
           break
         end
       end
-      #puts [want, pattern, *values].inspect
       return want
     end
 
@@ -57,7 +56,7 @@ module SlashPort
           filter.each do |filterkey,filtervalue|
             want = _want(filtervalue, result.labels[filterkey],
                          result.data[filterkey])
-            puts "Filter: #{want} => #{filterkey} #{filtervalue}"
+            #puts "Filter: #{want} => #{filterkey} #{filtervalue}"
 
             if (!want)
               keep = false
