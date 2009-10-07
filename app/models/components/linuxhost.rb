@@ -2,25 +2,27 @@ require 'rubygems'
 
 class SlashPort::Component
   class LinuxHost < SlashPort::Component
-    #attribute :name => "uptime",
-              #:handler => :Uptime,
-              #:doc => "Uptime in seconds"
+    attribute :name => "uptime",
+              :handler => :Uptime,
+              :doc => "Uptime in seconds"
 
     attribute :name => "interfaces",
               :handler => :IfStats,
               :sort => ["interface", "field"],
               :doc => "Interface Statistics"
 
-    #attribute :name => "memory",
-              #:handler => :MemStats,
-              #:doc => "Memory stats from /proc/meminfo"
+    attribute :name => "memory",
+              :handler => :MemStats,
+              :doc => "Memory stats from /proc/meminfo"
 
-    #attribute :name => "disk",
-              #:handler => :DiskStats,
-              #:doc => "Disk stats from 'df'"
+    attribute :name => "disk",
+              :handler => :DiskStats,
+              :doc => "Disk stats from 'df'"
 
     def Uptime
-      return File.open("/proc/uptime").read().split(" ")[0]
+      tuple = SlashPort::Tuple.new
+      tuple.data["uptime"] = File.open("/proc/uptime").read().split(" ")[0]
+      return tuple
     end
 
     def IfStats
@@ -49,6 +51,7 @@ class SlashPort::Component
 
     def MemStats
       data = Array.new
+      tuple = SlashPort::Tuple.new
       File.open("/proc/meminfo").readlines().each do |line|
         line.chomp!
         key, value, unit = line.split(/[: ]+/)
@@ -57,11 +60,9 @@ class SlashPort::Component
           value *= 1024
         end
 
-        data << {
-          "field" => key.downcase,
-          "value" => value,
-        }
+        tuple.data[key.downcase] = value
       end
+      data << tuple
       return data
     end # def MemStats
 
@@ -74,23 +75,22 @@ class SlashPort::Component
         next unless line =~ /^\//
 
         line.chomp!
+        tuple = SlashPort::Tuple.new
         fields = %w[size used available percentused]
         values = line.split
         source = values.shift
         mount = values.pop
 
+        tuple.labels["source"] = source
+        tuple.labels["mount"] = mount
         fields.zip(values).each do |field,value|
           if field == "percentused"
             value = value.to_i / 100.0
           end
 
-          data << {
-            "source" => source,
-            "mount" => mount,
-            "field" => field,
-            "value" => value,
-          }
+          tuple.data[field] = value
         end
+        data << tuple
       end
       return data
     end # def DiskStats

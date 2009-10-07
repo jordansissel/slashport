@@ -1,6 +1,6 @@
 class Var < Application
   def index
-    only_provides :json, :text
+    only_provides :json, :text, :pp
 
     filter = Hash.new
     params.each do |key, value|

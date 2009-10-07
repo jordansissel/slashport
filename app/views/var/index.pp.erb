@@ -1,0 +1,10 @@
+<% 
+require "pp"
+require "stringio"
+
+sio = StringIO.new
+PP.pp(@attributes, sio)
+sio.rewind
+output = sio.read
+%>
+<%= output %>
