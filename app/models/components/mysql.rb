@@ -4,6 +4,9 @@ require 'mysql' # for mysql errors
 
 class SlashPort::Component
   class Mysql < SlashPort::Component
+    attr_accessor :host
+    attr_accessor :user
+    attr_accessor :password
 
     attribute :name => "master-status",
               :handler => :MasterStatus,

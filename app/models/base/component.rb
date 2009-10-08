@@ -141,21 +141,28 @@ module SlashPort
       @attributes = Registry.new
       @configs = Registry.new
       @label = self.name.split("::")[-1].downcase
+
+      # disable this component by default
+      puts "Disabling component '#{@label}' (default action, you must enable it if you want to use it)"
+      disable
     end # def.class_initialize
 
     # Show me all subclasses of SlashPort::Component
     def self.components
       if @@components.length == 0
         @@subclasses.each do |klass|
-          @@components << klass.new
+          component = klass.new
+          @@components << component
         end
       end
+
       return @@components
     end # def self.components
 
     def self.get_things(thing, filter=nil)
       data = []
       self.components.each do |component|
+        next unless component.class.is_enabled?
         result = component.send("get_#{thing}", filter)
         if result
           data += result
@@ -175,5 +182,18 @@ module SlashPort
     def self.label
       return @label
     end
+
+    def self.disable
+      @active = false
+    end
+
+    def self.enable
+      @active = true
+    end
+
+    def self.is_enabled?
+      return @active
+    end
+
   end # class Component
 end # module SlashPort
