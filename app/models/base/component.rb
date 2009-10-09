@@ -46,6 +46,7 @@ module SlashPort
       thing.each do |section, var|
         next unless _want(filter["section"], section)
         results = self.send(var.handler)
+        next if results == nil
         results = [results] if !results.is_a?(Array)
 
         results.each do |result|
@@ -143,8 +144,9 @@ module SlashPort
       @label = self.name.split("::")[-1].downcase
 
       # disable this component by default
-      puts "Disabling component '#{@label}' (default action, you must enable it if you want to use it)"
-      disable
+      #puts "Disabling component '#{@label}' (default action, you must enable it if you want to use it)"
+      #disable
+      enable
     end # def.class_initialize
 
     # Show me all subclasses of SlashPort::Component

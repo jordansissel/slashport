@@ -59,7 +59,7 @@ class SlashPort::Component
         end
         data << tuple
       rescue Sequel::DatabaseConnectionError, Sequel::DatabaseError
-        # ignore
+        return nil
       end
       return data
     end # end MasterStatus
