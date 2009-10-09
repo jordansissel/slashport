@@ -1,6 +1,5 @@
 require 'rubygems'
 require 'sequel'
-require 'mysql' # for mysql errors
 
 class SlashPort::Component
   class Mysql < SlashPort::Component
@@ -30,7 +29,12 @@ class SlashPort::Component
 
     def initialize
       super
-      @db = Sequel.connect("mysql://slashport@localhost")
+      begin
+        @db = Sequel.connect("mysql://slashport@localhost")
+      rescue Sequel::AdapterNotFound => e
+        puts "Disabling #{self.class.label} component: missing mysql Sequel adapter: #{e.inspect}"
+        self.class.disable
+      end
     end
 
     def MysqlOK
