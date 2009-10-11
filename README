@@ -1,0 +1,36 @@
+slashport features
+- export data over http.
+- export state and config data over http in a known format (json, etc)
+
+
+Standardize on exporting:
+- state data/variables
+- configuration
+
+Exported data is simply a list of attributes.
+An attribute is basically a key-value pair, where the key has multiple dimensions and the value can be multiple values.
+
+A simple example is exporting data about a host network interface. We might have multiple dimensions that label each data point:
+* component = host
+* section = network
+* interface = eth0
+* interface_type = ethernet
+
+Multiple state and statistics data can be pointed at by the above set of labels:
+* packets and bytes received and transmitted
+* link state
+* link speed
+* error counts
+* etc...
+
+In ruby, this might present itself as a hash where both key and value are hashes themselves:
+
+attribute = {
+  { "component" => "host", "section" => "network",
+    "interface" => "eth0", "interface_type" => "ethernet" } =>
+  { "link-state" => "UP", "link-speed": 1000,
+    "tx-packets" => 29293857, "tx-bytes" => 298752983759827,
+    ...
+  }
+}
+
