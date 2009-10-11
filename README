@@ -1,7 +1,7 @@
-slashport features
-- export data over http.
-- export state and config data over http in a known format (json, etc)
-
+Goals:
+- replace snmpd on hosts, because extending snmpd sucks
+- be easy to use and trivial to extend
+- be simple, use common protocols and formats for easy of use by any language.
 
 Standardize on exporting:
 - state data/variables
