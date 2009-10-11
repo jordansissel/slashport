@@ -103,6 +103,7 @@ url = URI.parse("http://#{options.host}:#{options.port}/var?#{query}")
 resp = Net::HTTP.get(url)
 data = JSON.parse(resp)
 
+exitcode = 0
 data.each do |entry|
   # Skip if this entry matches any ignores
   next if ignores.select { |check| check.match?(entry) }.length > 0
@@ -110,9 +111,13 @@ data.each do |entry|
   if checks.length == 0
     puts entry.inspect
   end
+
   checks.each do |check|
     if check.match?(entry)
-      puts "CRITICAL #{check} - #{entry.inspect}"
+      puts "#{check} - #{entry.inspect}"
+      exitcode = 2
     end
   end
 end
+
+exit exitcode
