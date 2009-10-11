@@ -27,10 +27,13 @@ module SlashPort
 
       want = false
       values.each do |value|
-        if (pattern.is_a?(Regexp) and !!(value =~ pattern))
+        #puts "Checking #{pattern.class}/#{pattern} against #{value.class}/#{value.inspect}"
+        if (pattern.is_a?(Regexp) and !!(value.to_s =~ pattern))
+          #puts "Match! =~"
           want = true
           break
         elsif value == pattern
+          #puts "Match! =="
           want = true
           break
         end
@@ -71,7 +74,7 @@ module SlashPort
             if (result.data.keys & filter.keys).length > 0
               result.data.each_key do |key|
                 next if filter.has_key?(key)
-                puts "Removing #{key} data"
+                #puts "Removing #{key} data"
                 result.data.delete(key)
               end
             end
@@ -88,7 +91,7 @@ module SlashPort
 
     # See Class#inherited for what this method 
     def self.inherited(subclass)
-      puts "#{subclass.name} inherits #{self.name}"
+      #puts "#{subclass.name} inherits #{self.name}"
       @@subclasses << subclass
 
       if subclass.respond_to?(:class_initialize)
@@ -107,7 +110,7 @@ module SlashPort
         raise "Attribute #{self.name}/#{name} has no description"
       end
       name = options[:name]
-      puts "#{self.name}: new attribute #{name}"
+      #puts "#{self.name}: new attribute #{name}"
       options[:sort] ||= []
 
       # remember: this is a class-level instance attribute
@@ -119,7 +122,7 @@ module SlashPort
       if description == nil
         raise "Config #{self.name}/#{name} has no description"
       end
-      puts "#{self.name}: new config #{name}"
+      #puts "#{self.name}: new config #{name}"
 
       # remember: this is a class-level instance variable
       @configs[name] = Variable.new(handler, description)
@@ -137,7 +140,7 @@ module SlashPort
     # creates this class object, a hack made possible by
     # overriding Class#inherited (see 'def inherited' above).
     def self.class_initialize
-      puts "#{self}::class_initialize"
+      #puts "#{self}::class_initialize"
       # remember, this is a class-level instance attribute
       @attributes = Registry.new
       @configs = Registry.new

@@ -1,0 +1,118 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'json'
+require 'optparse'
+require "ostruct"
+require "net/http"
+require "uri"
+
+class Check
+  def initialize(name, cmp, value)
+    @name = name
+    @value = value
+    @cmpstr = cmp
+    case cmp
+    when ">="
+      @cmp = Proc.new { |v| v >= fix(v, @value) }
+    when "<="
+      @cmp = Proc.new { |v| v <= fix(v, @value) }
+    when "=="
+      @cmp = Proc.new { |v| v == fix(v, @value) }
+    when "<"
+      @cmp = Proc.new { |v| v < fix(v, @value) }
+    when ">"
+      @cmp = Proc.new { |v| v > fix(v, @value) }
+    else
+      raise "Unknown comparison '#{cmp}'"
+    end
+  end
+
+  def to_s
+    return "#{@name} #{@cmpstr} #{@value}"
+  end
+
+  # if 'a' is an int or float, try to convert b to the same thing
+  def fix(a, b)
+    if a.is_a?(Integer)
+      return b.to_i
+    elsif a.is_a?(Float)
+      return b.to_f
+    else
+      return b
+    end
+  end
+
+  def self.new_from_string(value)
+    return nil unless value =~ /^([A-z0-9_-]+)\s*((?:[><=]=)|[<>])\s*(.*)$/
+    return Check.new($1, $2, $3)
+  end
+
+  def match?(attribute)
+    match = false
+    ["data", "labels"].each do |type|
+      if (attribute[type].has_key?(@name) and @cmp.call(attribute[type][@name]))
+        match = true
+        return match
+      end
+    end
+    return match
+  end
+end
+
+checks = []
+ignores = []
+options = OpenStruct.new
+options.filters = []
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} [options]"
+  opts.on("-f FILTER", "--filter FILTER", "Add a filter") do |v|
+    name, value = v.split("=", 2)
+    options.filters << [ name, value ]
+  end
+
+  opts.on("-i FILTER", "--ignore FILTER", "Ignore things matching a check") do |v|
+    check = Check.new_from_string(v)
+    if check == nil
+      puts "Invalid check #{v}"
+      exit 1
+    end
+    ignores << check
+  end
+  
+  opts.on("-h HOST[:PORT]", "--host HOST[:PORT]", "Host to query") do |v|
+    host, port = v.split(":",2)
+    port ||= 4000
+    options.host = host
+    options.port = port
+  end
+
+  opts.on("-c CHECK", "--check CHECK", "Output if CHECK succeeds") do |v|
+    check = Check.new_from_string(v)
+    if check == nil
+      puts "Invalid check #{v}"
+      exit 1
+    end
+    checks << check
+  end
+end
+parser.parse!
+
+query = options.filters.collect { |k,v| "#{k}=#{v}" }.join("&")
+url = URI.parse("http://#{options.host}:#{options.port}/var?#{query}")
+resp = Net::HTTP.get(url)
+data = JSON.parse(resp)
+
+data.each do |entry|
+  # Skip if this entry matches any ignores
+  next if ignores.select { |check| check.match?(entry) }.length > 0
+
+  if checks.length == 0
+    puts entry.inspect
+  end
+  checks.each do |check|
+    if check.match?(entry)
+      puts "CRITICAL #{check} - #{entry.inspect}"
+    end
+  end
+end
