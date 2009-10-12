@@ -1,14 +1,91 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'merb-core'
+require "rubygems"
+require "merb-core"
+require "optparse"
 
-merbdir = "#{File::dirname($0)}/../"
+class Options < Struct.new(:host, :port, :modules, :configs); end
 
-ARGV.push '-H' if ARGV[0] && ARGV[0] =~ /^[^-]/
-unless %w[-a --adapter -i --irb-console -r --script-runner].any? { |o| ARGV.index(o) }
-  ARGV.push *%w[-a mongrel]
+options = Options.new
+options.host = "0.0.0.0"
+options.port = 4000
+options.modules = []
+options.configs = []
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage; #{$0} [options}"
+
+  opts.on("-l HOST[:PORT]", "--listen HOST[:PORT]",
+          "Listen on specific host:port") do |v|
+    options.host, options.port = v.split(":")
+    options.port ||= 4000
+  end
+
+  opts.on("-c COMPONENT", "--componet COMPONENT",
+          "Load specific component") do |v|
+    options.modules << v
+  end
+
+  opts.on("-f CONFIG", "--config CONFIG",
+          "Read a config file") do |v|
+    options.configs << v
+  end
 end
 
-ARGV.push *["-m", merbdir]
-Merb.start
+parser.parse!
+
+merbdir = "#{File::dirname($0)}/../"
+merbargs = %w[-a mongrel -e production]
+merbargs.push *["-m", merbdir]
+#Merb::Config.parse_args(merbargs)
+
+#Merb::Config[:reload_classes] = false
+#Merb::Config[:reload_templates] = false
+#Merb::Config[:exception_detauls] = true
+#Merb::Config[:log_level] = :error
+
+#Merb::Config[:log_stream] = STDOUT
+#Merb::Config[:log_file] = nil
+
+Merb::BootLoader.after_app_loads do
+  options.modules.each do |name|
+    require name
+  end
+
+  count = 0
+  options.configs.each do |name|
+    File.open(name).each do |line|
+      line.chomp!
+      puts "Config: #{line}"
+      next unless line =~ /^exec ([A-z0-9_-]+) ([A-z0-9_-]+) (.+)/
+      # format: exec <component> <section> <command ...>
+
+      component = $1
+      section = $2
+      cmd = $3
+      func = "#{component}_#{section}".tr("-", "_")
+      puts "Func: #{func}"
+      eval %{
+        module SlashPort
+          module ConfigGenerated
+            class #{component.upcase} < SlashPort::Component
+              attribute :name => "#{section}",
+                        :handler => :#{func},
+                        :doc => "#{func}"
+
+              def #{func}
+                return SlashPort::Exec.new("#{cmd}").to_tuple
+              end
+            end # class #{component.upcase}
+          end # module ConfigGenerated
+        end # module SlashPort
+      }
+
+      count += 1
+    end
+  end
+end # BootLoader.after_app_loads
+
+puts "Starting server"
+Merb.start(merbargs)
+#puts Merb::Server.start(Merb::Config[:port], Merb::Config[:cluster])

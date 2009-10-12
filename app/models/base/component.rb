@@ -91,7 +91,7 @@ module SlashPort
 
     # See Class#inherited for what this method 
     def self.inherited(subclass)
-      #puts "#{subclass.name} inherits #{self.name}"
+      puts "#{subclass.name} inherits #{self.name}"
       @@subclasses << subclass
 
       if subclass.respond_to?(:class_initialize)
@@ -110,7 +110,7 @@ module SlashPort
         raise "Attribute #{self.name}/#{name} has no description"
       end
       name = options[:name]
-      #puts "#{self.name}: new attribute #{name}"
+      puts "#{self.name}: new attribute #{name}"
       options[:sort] ||= []
 
       # remember: this is a class-level instance attribute

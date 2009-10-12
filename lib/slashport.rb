@@ -1,78 +1,91 @@
 require 'rubygems'
-require 'rack'
+require 'json'
+require 'optparse'
+require "ostruct"
+require "net/http"
+require "uri"
 
 module SlashPort
-  class Component
-    # Keep a registry of subclasses for autoregistration
-    class << self
-      @@subclasses = []
-      attr_reader :variables
-
-      # See Class#inherited for what this method 
-      def inherited(subclass)
-        puts "#{subclass.name} inherits #{self.name}"
-        @@subclasses << subclass
-
-        if subclass.respond_to?(:class_initialize)
-          subclass.class_initialize
-        end
-      end # def self.inherited
-
-      # class-level to easily map a variable name to a method
-      def variable(name, method, description=nil)
-        if description == nil
-          raise "Variable #{self.name}/#{name} has no description"
-        end
-        puts "#{self.name}: new variable #{name}"
-
-        # remember: this is a class-level instance variable
-        @variables[name] = method
-        puts description
-      end # def self.variable
- 
-      # class-level initialization. This is called when ruby first
-      # creates this class object, a hack made possible by
-      # overriding Class#inherited (see 'def inherited' above).
-      def class_initialize
-        puts "#{self}::class_initialize"
-        # remember: this is a class-level instance variable
-        @variables = Hash.new
-      end # def.class_initialize
-
-      # Show me all subclasses of SlashPort::Component
-      def all
-        return @@subclasses
-      end # def self.all
-    end # class << self (SlashPort::Component)
-
-    def initialize
-
-    end
-
-    def variables
-      data = Hash.new
-      self.class.variables.each do |name, method|
-        data[name] = self.send(method)
+  class Check # class SlashPort::Check
+    def initialize(name, cmp, value)
+      @name = name
+      @value = value
+      @cmpstr = cmp
+      case cmp
+      when ">="
+        @cmp = Proc.new { |v| v >= coerce(v, @value) }
+      when "<="
+        @cmp = Proc.new { |v| v <= coerce(v, @value) }
+      when "=="
+        @cmp = Proc.new { |v| v == coerce(v, @value) }
+      when "<"
+        @cmp = Proc.new { |v| v < coerce(v, @value) }
+      when ">"
+        @cmp = Proc.new { |v| v > coerce(v, @value) }
+      else
+        raise "Unknown comparison '#{cmp}'"
       end
-      return data
+    end # def initialize
+
+    def to_s
+      return "#{@name} #{@cmpstr} #{@value}"
+    end # def to_s
+
+    # if 'a' is an int or float, try to convert b to the same thing
+    def coerce(a, b)
+      return b.to_i if a.is_a?(Integer)
+      return b.to_f if a.is_a?(Float)
+      return b
+    end # def coerce
+
+    # Turn a string "name cmp value" into a Check.
+    # Valid cmp are <, >, <=, >=, and ==
+    def self.new_from_string(value)
+      return nil unless value =~ /^([A-z0-9_-]+)\s*((?:[><=]=)|[<>])\s*(.*)$/
+      return SlashPort::Check.new($1, $2, $3)
+    end # def self.new_from_string
+
+    # Given an attribute, does this check match?
+    def match?(attribute)
+      match = false
+      ["data", "labels"].each do |type|
+        if (attribute[type].has_key?(@name) and @cmp.call(attribute[type][@name]))
+          match = true
+          return match
+        end
+      end
+      return match
+    end # def match?
+  end # class SlashPort::Check
+
+  class Fetcher # class SlashPort::Fetcher
+    def initialize(host, port=4000)
+      @host = host
+      @port = port
+      @scheme = "http"
+
+      @filters = []
+      @checks = []
+    end # def initialize
+
+    def add_filter(key, value)
+      @filters << [key, value]
     end
-  end # module Component
+
+    def fetch
+      url = "#{@scheme}://#{@host}:#{@port}/var.json?#{query}"
+      puts "URL: #{url}"
+      response = Net::HTTP.get_response(URI.parse(url))
+      if response.code.to_i != 200
+        raise "Non-OK http response: #{response.code}"
+      end
+
+      return JSON::parse(response.body)
+    end # def fetch
+
+    def query
+      return @filters.collect { |a,b| "#{a}=#{b}" }.join("&")
+    end # def query
+  end # class SlashPort::Fetcher
+
 end # module SlashPort
-
-class Foo < SlashPort::Component
-  variable "test", :VariableTest, <<-doc
-    Test documentation
-  doc
-
-  variable "bar", :VariableTest, <<-doc
-    Bar bazzle!
-  doc
-
-  def VariableTest
-    return 123
-  end
-end
-
-x = Foo.new
-puts x.variables.inspect
-

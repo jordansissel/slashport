@@ -1,69 +1,20 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'json'
-require 'optparse'
+require "rubygems"
+require "json"
+require "optparse"
 require "ostruct"
 require "net/http"
 require "uri"
 
-class Check
-  def initialize(name, cmp, value)
-    @name = name
-    @value = value
-    @cmpstr = cmp
-    case cmp
-    when ">="
-      @cmp = Proc.new { |v| v >= fix(v, @value) }
-    when "<="
-      @cmp = Proc.new { |v| v <= fix(v, @value) }
-    when "=="
-      @cmp = Proc.new { |v| v == fix(v, @value) }
-    when "<"
-      @cmp = Proc.new { |v| v < fix(v, @value) }
-    when ">"
-      @cmp = Proc.new { |v| v > fix(v, @value) }
-    else
-      raise "Unknown comparison '#{cmp}'"
-    end
-  end
-
-  def to_s
-    return "#{@name} #{@cmpstr} #{@value}"
-  end
-
-  # if 'a' is an int or float, try to convert b to the same thing
-  def fix(a, b)
-    if a.is_a?(Integer)
-      return b.to_i
-    elsif a.is_a?(Float)
-      return b.to_f
-    else
-      return b
-    end
-  end
-
-  def self.new_from_string(value)
-    return nil unless value =~ /^([A-z0-9_-]+)\s*((?:[><=]=)|[<>])\s*(.*)$/
-    return Check.new($1, $2, $3)
-  end
-
-  def match?(attribute)
-    match = false
-    ["data", "labels"].each do |type|
-      if (attribute[type].has_key?(@name) and @cmp.call(attribute[type][@name]))
-        match = true
-        return match
-      end
-    end
-    return match
-  end
-end
+$: << "#{File::dirname($0)}/../lib"
+require "slashport"
 
 checks = []
 ignores = []
 options = OpenStruct.new
 options.filters = []
+options.port = 4000
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
   opts.on("-f FILTER", "--filter FILTER", "Add a filter") do |v|
@@ -72,7 +23,7 @@ parser = OptionParser.new do |opts|
   end
 
   opts.on("-i FILTER", "--ignore FILTER", "Ignore things matching a check") do |v|
-    check = Check.new_from_string(v)
+    check = SlashPort::Check.new_from_string(v)
     if check == nil
       puts "Invalid check #{v}"
       exit 1
@@ -88,7 +39,7 @@ parser = OptionParser.new do |opts|
   end
 
   opts.on("-c CHECK", "--check CHECK", "Output if CHECK succeeds") do |v|
-    check = Check.new_from_string(v)
+    check = SlashPort::Check.new_from_string(v)
     if check == nil
       puts "Invalid check #{v}"
       exit 1
@@ -98,13 +49,18 @@ parser = OptionParser.new do |opts|
 end
 parser.parse!
 
-query = options.filters.collect { |k,v| "#{k}=#{v}" }.join("&")
-url = URI.parse("http://#{options.host}:#{options.port}/var?#{query}")
-resp = Net::HTTP.get(url)
-data = JSON.parse(resp)
+if options.host == nil
+  puts "No --host specified."
+  exit 1
+end
 
 exitcode = 0
-data.each do |entry|
+fetcher = SlashPort::Fetcher.new(options.host, options.port)
+options.filters.each do |filter|
+  fetcher.add_filter(*filter)
+end
+
+fetcher.fetch.each do |entry|
   # Skip if this entry matches any ignores
   next if ignores.select { |check| check.match?(entry) }.length > 0
 
