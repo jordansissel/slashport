@@ -32,7 +32,6 @@ class SlashPort::Exec
         tuple.labels["string"] = 1
         tuple.data["value"] = line
       end
-      puts "OK"
 
       data << tuple
     end

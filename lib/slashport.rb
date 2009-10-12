@@ -18,6 +18,8 @@ module SlashPort
         @cmp = Proc.new { |v| v <= coerce(v, @value) }
       when "=="
         @cmp = Proc.new { |v| v == coerce(v, @value) }
+      when "!="
+        @cmp = Proc.new { |v| v != coerce(v, @value) }
       when "<"
         @cmp = Proc.new { |v| v < coerce(v, @value) }
       when ">"
@@ -41,7 +43,7 @@ module SlashPort
     # Turn a string "name cmp value" into a Check.
     # Valid cmp are <, >, <=, >=, and ==
     def self.new_from_string(value)
-      return nil unless value =~ /^([A-z0-9_-]+)\s*((?:[><=]=)|[<>])\s*(.*)$/
+      return nil unless value =~ /^([A-z0-9_-]+)\s*((?:[><=!]=)|[<>])\s*(.*)$/
       return SlashPort::Check.new($1, $2, $3)
     end # def self.new_from_string
 
@@ -74,7 +76,7 @@ module SlashPort
 
     def fetch
       url = "#{@scheme}://#{@host}:#{@port}/var.json?#{query}"
-      puts "URL: #{url}"
+      #puts "URL: #{url}"
       response = Net::HTTP.get_response(URI.parse(url))
       if response.code.to_i != 200
         raise "Non-OK http response: #{response.code}"
