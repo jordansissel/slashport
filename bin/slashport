@@ -62,6 +62,7 @@ Merb::Config.use do |c|
   c[:name] = "slashport"
   c[:environment] = nil
   c[:exception_details] = true
+  c[:pid_file] = options.pidfile
 
   if options.logfile == "-"
     c[:log_stream] = STDOUT
