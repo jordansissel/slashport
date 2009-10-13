@@ -80,8 +80,6 @@ fetcher.fetch.each do |entry|
   end
 end
 
-if matches == 0
-  puts "#{matches} matches to #{$0} #{argstr}"
-end
+puts "#{matches} matches to #{$0} #{argstr}"
 
 exit exitcode
