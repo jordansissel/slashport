@@ -15,6 +15,7 @@ ignores = []
 options = OpenStruct.new
 options.filters = []
 options.port = 4000
+argstr = ARGV.join(" ")
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
   opts.on("-f FILTER", "--filter FILTER", "Add a filter") do |v|
@@ -60,20 +61,27 @@ options.filters.each do |filter|
   fetcher.add_filter(*filter)
 end
 
+matches = 0
 fetcher.fetch.each do |entry|
   # Skip if this entry matches any ignores
   next if ignores.select { |check| check.match?(entry) }.length > 0
 
   if checks.length == 0
     puts entry.inspect
+    matches += 1
   end
 
   checks.each do |check|
     if check.match?(entry)
-      puts "#{check} - #{entry.inspect}"
+      puts "#{check} matches #{entry.inspect}"
       exitcode = 2
+      matches += 1
     end
   end
+end
+
+if matches == 0
+  puts "#{matches} matches to #{$0} #{argstr}"
 end
 
 exit exitcode
