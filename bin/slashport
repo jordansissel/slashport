@@ -4,20 +4,29 @@ require "rubygems"
 require "merb-core"
 require "optparse"
 
-class Options < Struct.new(:host, :port, :modules, :configs); end
+class Options < Struct.new(:host, :port, :modules, :configs, :logfile, :pidfile)
+  # empty
+end # class Options
 
 options = Options.new
 options.host = "0.0.0.0"
 options.port = 4000
 options.modules = []
 options.configs = []
+options.logfile = "-"
+options.pidfile = "/tmp/slashport.pid"
 
 parser = OptionParser.new do |opts|
   opts.banner = "Usage; #{$0} [options}"
 
   opts.on("-l HOST[:PORT]", "--listen HOST[:PORT]",
           "Listen on specific host:port") do |v|
+
     options.host, options.port = v.split(":")
+
+    if options.host == ""
+      options.host = "0.0.0.0"
+    end
     options.port ||= 4000
   end
 
@@ -30,22 +39,37 @@ parser = OptionParser.new do |opts|
           "Read a config file") do |v|
     options.configs << v
   end
+
+  opts.on("-o LOGFILE", "--log LOGFILE", "Logfile to write to") do |v|
+    options.logfile = v
+  end
+
+  opts.on("-p PIDFILE", "--pidfile PIDFILE", "Pid file to write") do |v|
+    options.pidfile = v
+  end
 end
 
 parser.parse!
 
-merbdir = "#{File::dirname($0)}/../"
-merbargs = %w[-a mongrel -e production]
-merbargs.push *["-m", merbdir]
-#Merb::Config.parse_args(merbargs)
+merbdir = "#{File::dirname(__FILE__)}/../"
+merbopts = {
+  :host => options.host,
+  :port => options.port,
+  :adapter => "mongrel",
+  :reload_classes => false,
+  :merb_root => merbdir,
+  :log_level => :error,
+  :name => "slashport",
+  :environment => nil,
+}
 
-#Merb::Config[:reload_classes] = false
-#Merb::Config[:reload_templates] = false
-#Merb::Config[:exception_detauls] = true
-#Merb::Config[:log_level] = :error
-
-#Merb::Config[:log_stream] = STDOUT
-#Merb::Config[:log_file] = nil
+if options.logfile == "-"
+  merbopts[:log_stream] = STDOUT
+  merbopts[:log_file] = nil
+else
+  merbopts[:log_file] = options.logfile
+  merbopts[:log_stream] = nil
+end
 
 Merb::BootLoader.after_app_loads do
   options.modules.each do |name|
@@ -87,5 +111,6 @@ Merb::BootLoader.after_app_loads do
 end # BootLoader.after_app_loads
 
 puts "Starting server"
-Merb.start(merbargs)
-#puts Merb::Server.start(Merb::Config[:port], Merb::Config[:cluster])
+puts options.inspect
+puts merbopts.inspect
+Merb.start(merbopts)
