@@ -52,24 +52,25 @@ end
 parser.parse!
 
 merbdir = "#{File::dirname(__FILE__)}/../"
-merbopts = {
-  :host => options.host,
-  :port => options.port,
-  :adapter => "mongrel",
-  :reload_classes => false,
-  :merb_root => merbdir,
-  :log_level => :error,
-  :name => "slashport",
-  :environment => nil,
-}
+Merb::Config.use do |c|
+  c[:host] = options.host
+  c[:port] = options.port
+  c[:adapter] = "mongrel"
+  c[:reload_classes] = false
+  c[:merb_root] = merbdir
+  c[:log_level] = :info
+  c[:name] = "slashport"
+  c[:environment] = nil
+  c[:exception_details] = true
 
-if options.logfile == "-"
-  merbopts[:log_stream] = STDOUT
-  merbopts[:log_file] = nil
-else
-  merbopts[:log_file] = options.logfile
-  merbopts[:log_stream] = nil
-end
+  if options.logfile == "-"
+    c[:log_stream] = STDOUT
+    c[:log_file] = nil
+  else
+    c[:log_file] = options.logfile
+    c[:log_stream] = nil
+  end
+end # Merb::Config.use
 
 Merb::BootLoader.after_app_loads do
   options.modules.each do |name|
@@ -112,5 +113,5 @@ end # BootLoader.after_app_loads
 
 puts "Starting server"
 puts options.inspect
-puts merbopts.inspect
-Merb.start(merbopts)
+
+Merb.start(Merb::Config.to_hash)
