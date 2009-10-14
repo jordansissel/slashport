@@ -19,6 +19,10 @@ class SlashPort::Component
               :handler => :DiskStats,
               :doc => "Disk stats from 'df'"
 
+    attribute :name => "load",
+              :handler => :LoadAverage,
+              :doc => "System load average reported by uptime(1)"
+
     def Uptime
       tuple = SlashPort::Tuple.new
       tuple.data["uptime"] = File.open("/proc/uptime").read().split(" ")[0]
@@ -92,7 +96,21 @@ class SlashPort::Component
         end
         data << tuple
       end
+      Process.wait(-1, Process::WNOHANG)
       return data
     end # def DiskStats
+  end
+
+  def LoadAverage
+    data = Array.new
+    tuple = SlashPort::Tuple.new
+    loads = %x{uptime}.chomp.delete(",").split(/ +/)[-3..-1].map { |x| x.to_f }
+    load1, load5, load15 = loads
+    tuple.data["load-1min"] = load1
+    tuple.data["load-5min"] = load5
+    tuple.data["load-15min"] = load15
+
+    data << tuple
+    return data
   end
 end
