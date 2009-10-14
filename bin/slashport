@@ -30,7 +30,7 @@ parser = OptionParser.new do |opts|
     options.port ||= 4000
   end
 
-  opts.on("-c COMPONENT", "--componet COMPONENT",
+  opts.on("-c COMPONENT", "--component COMPONENT",
           "Load specific component") do |v|
     options.modules << v
   end
