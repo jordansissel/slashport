@@ -1,3 +1,4 @@
+require "socket"
 
 module SlashPort
   class Component
@@ -55,6 +56,7 @@ module SlashPort
         results.each do |result|
           result.labels["component"] = self.class.label
           result.labels["section"] = section
+          result.labels["host"] = Socket.gethostname
 
           keep = true
           filter.each do |filterkey,filtervalue|

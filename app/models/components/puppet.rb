@@ -4,7 +4,7 @@ class SlashPort::Component
   class Puppet < SlashPort::Component
     attribute :name => "freshness",
               :handler => :freshness,
-              :doc => "Freshness according to puppet's localconfig.yaml "
+              :doc => "Freshness according to puppet's localconfig.yaml"
 
     def freshness
       begin
@@ -17,4 +17,4 @@ class SlashPort::Component
       end
     end # def freshness
   end # class Puppet
-end
+end # class SlashPort::Component
