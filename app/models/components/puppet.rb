@@ -9,7 +9,7 @@ class SlashPort::Component
     def freshness
       begin
         tuple = SlashPort::Tuple.new
-        age = Time.now - File.stat("/var/puppet/state/localconfig.yaml")
+        age = Time.now - File.stat("/var/puppet/state/state.yaml").mtime
         tuple.data["freshness"] = age.to_f
         return tuple
       rescue Errno::ENOENT
