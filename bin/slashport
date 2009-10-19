@@ -4,14 +4,14 @@ require "rubygems"
 require "merb-core"
 require "optparse"
 
-class Options < Struct.new(:host, :port, :modules, :configs, :logfile, :pidfile)
+class Options < Struct.new(:host, :port, :components, :configs, :logfile, :pidfile)
   # empty
 end # class Options
 
 options = Options.new
 options.host = "0.0.0.0"
 options.port = 4000
-options.modules = []
+options.components = []
 options.configs = []
 options.logfile = "-"
 options.pidfile = "/tmp/slashport.pid"
@@ -32,7 +32,19 @@ parser = OptionParser.new do |opts|
 
   opts.on("-c COMPONENT", "--component COMPONENT",
           "Load specific component") do |v|
-    options.modules << v
+    options.components << v
+  end
+
+  opts.on("-C COMPONENT_DIRECTORY", "--component-directory COMPONENT_DIRECTORY",
+          "Load components from a directory. All components must end in '.rb'") do |v|
+    if !File.directory?(v) or !File.readable?(v)
+      $stderr.puts "Path '#{v}' is not a directory or is not readable."
+      exit 1
+    end
+
+    Dir["#{v}/*.rb"].each do |file|
+      options.components << file
+    end
   end
 
   opts.on("-f CONFIG", "--config CONFIG",
@@ -74,7 +86,7 @@ Merb::Config.use do |c|
 end # Merb::Config.use
 
 Merb::BootLoader.after_app_loads do
-  options.modules.each do |name|
+  options.components.each do |name|
     require name
   end
 
