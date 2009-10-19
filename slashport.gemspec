@@ -7,7 +7,7 @@ files << "log"
 
 spec = Gem::Specification.new do |s|
   s.name = 'slashport'
-  s.version = '0.15.6'
+  s.version = '0.15.8'
   s.summary = "slashport"
   s.description = %{slashport}
   s.files = files
