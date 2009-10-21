@@ -10,11 +10,15 @@ require "uri"
 $: << "#{File::dirname(__FILE__)}/../lib"
 require "slashport"
 
+WARNING = 1
+CRITICAL = 2
+
 checks = []
 ignores = []
 options = OpenStruct.new
 options.filters = []
 options.port = 4000
+options.empty_results_is_ok = false
 argstr = ARGV.join(" ")
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
@@ -47,6 +51,12 @@ parser = OptionParser.new do |opts|
     end
     checks << check
   end
+
+  opts.on("-r", "--empty-results-is-ok",
+             "Declare that having no matches to filters (after ignores are " \
+             "applied) is not an error") do |v|
+    options.empty_results_is_ok = true
+  end
 end
 parser.parse!
 
@@ -62,9 +72,11 @@ options.filters.each do |filter|
 end
 
 matches = 0
+entries = 0
 fetcher.fetch.each do |entry|
   # Skip if this entry matches any ignores
   next if ignores.select { |check| check.match?(entry) }.length > 0
+  entries += 1
 
   if checks.length == 0
     puts entry.inspect
@@ -74,10 +86,16 @@ fetcher.fetch.each do |entry|
   checks.each do |check|
     if check.match?(entry)
       puts "#{check} matches #{entry.inspect}"
-      exitcode = 2
+      exitcode = CRITICAL
       matches += 1
     end
   end
+end
+
+if !options.empty_results_is_ok and entries == 0
+  puts "No entries found matching your filters, so there weren't any checks attempted."
+  puts "This is an error. If this is OK, then run with --empty-results-is-ok"
+  exitcode = CRITICAL
 end
 
 puts "#{matches} matches to #{$0} #{argstr}"
