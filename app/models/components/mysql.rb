@@ -7,11 +7,11 @@ class SlashPort::Component
     attr_accessor :user
     attr_accessor :password
 
-    attribute :name => "master-status",
+    attribute :name => "master_status",
               :handler => :MasterStatus,
               :doc => "Shows the master status of this mysql server"
 
-    attribute :name => "slave-status",
+    attribute :name => "slave_status",
               :handler => :SlaveStatus,
               :doc => "Shows the slave status of this mysql server"
 
@@ -22,10 +22,6 @@ class SlashPort::Component
     attribute :name => "connection", 
               :handler => :MysqlOK,
               :doc => "Reports whether we can send queries successfully to mysql."
-
-    #multiconfig "settings", :ConfigGetVariables, <<-doc
-      #Output of 'show variables'
-    #doc
 
     def initialize
       super
@@ -71,7 +67,7 @@ class SlashPort::Component
         ret = Hash.new
         if result == nil
           # this host is not a slave
-          tuple.data["is-slave"] = false
+          tuple.data["is_slave"] = false
         else
           result.each do |key, val|
             tuple.data[key.to_s.downcase] = val

@@ -114,9 +114,9 @@ class SlashPort::Component
       loads = %x{uptime}.chomp.delete(",").split(/ +/)[-3..-1].map { |x| x.to_f }
       _reapchild
       load1, load5, load15 = loads
-      tuple.data["load-1min"] = load1
-      tuple.data["load-5min"] = load5
-      tuple.data["load-15min"] = load15
+      tuple.data["load_1min"] = load1
+      tuple.data["load_5min"] = load5
+      tuple.data["load_15min"] = load15
 
       data << tuple
       return data
