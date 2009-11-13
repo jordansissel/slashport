@@ -28,12 +28,7 @@ parser = OptionParser.new do |opts|
   end
 
   opts.on("-i FILTER", "--ignore FILTER", "Ignore things matching a check") do |v|
-    check = SlashPort::Check.new_from_string(v)
-    if check == nil
-      puts "Invalid check #{v}"
-      exit 1
-    end
-    ignores << check
+    ignores << v
   end
   
   opts.on("-h HOST[:PORT]", "--host HOST[:PORT]", "Host to query") do |v|
@@ -44,12 +39,7 @@ parser = OptionParser.new do |opts|
   end
 
   opts.on("-c CHECK", "--check CHECK", "Output if CHECK succeeds") do |v|
-    check = SlashPort::Check.new_from_string(v)
-    if check == nil
-      puts "Invalid check #{v}"
-      exit 1
-    end
-    checks << check
+    checks << v
   end
 
   opts.on("-r", "--empty-results-is-ok",
@@ -73,9 +63,21 @@ end
 
 matches = 0
 entries = 0
+
+# monkeypatch OpenStruct so we can use it for a weak 
+# variable storage for the filters and checks.
+class OpenStruct
+  def get_binding
+    return binding
+  end
+end
+
 fetcher.fetch.each do |entry|
-  # Skip if this entry matches any ignores
-  next if ignores.select { |check| check.match?(entry) }.length > 0
+  # Convert entry to an openstruct
+  data = OpenStruct.new(entry["labels"].merge(entry["data"]))
+
+  # skip if any ignores evaluate to true
+  next if ignores.select { |code| eval code, data.get_binding }.length > 0
   entries += 1
 
   if checks.length == 0
@@ -83,9 +85,9 @@ fetcher.fetch.each do |entry|
     matches += 1
   end
 
-  checks.each do |check|
-    if check.match?(entry)
-      puts "#{check} matches #{entry.inspect}"
+  checks.each do |code|
+    if eval(code, data.get_binding)
+      puts "#{code.inspect} matched: #{entry.inspect}"
       exitcode = CRITICAL
       matches += 1
     end
