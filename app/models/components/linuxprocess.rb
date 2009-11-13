@@ -16,12 +16,15 @@ class SlashPort::Component::LinuxProcess < SlashPort::Component
     procinfo = ProcessInfo.new(pid)
     limits = procinfo.get_limits
     tuple = SlashPort::Tuple.new
-    puts limits.inspect
-    tuple.data["max_open_files"] = limits["open files"]
-    tuple.data["open_files"] = procinfo.open_files
+    tuple.data["open_files_max"] = limits["open files"]
+    tuple.data["open_files_used"] = procinfo.open_files
+    if limits["open files"] == "unlimited"
+      tuple.data["open_files_percent"] = 0.0
+    else
+      tuple.data["open_files_percent"] = procinfo.open_files / limits["open files"].to_f
+    end
     return tuple
   end
-
 end # class SlashPort::Component
 
 
